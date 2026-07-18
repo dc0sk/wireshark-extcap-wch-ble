@@ -41,15 +41,12 @@ fn ble_ch_to_rf(ch: u8) -> u8 {
 }
 
 fn extcap_interfaces() {
-    // extcap format: <name>;<display>;<help>
-    println!(
-        "wch-ble-extcap;WCH BLE Analyzer Pro;WCH BLE Analyzer Pro BLE 5.1 sniffer (3x CH582F MCUs)"
-    );
+    println!("extcap {{version=0.1.0}}");
+    println!("interface {{value=wch-ble-extcap}}{{display=WCH BLE Analyzer Pro}}");
 }
 
 fn extcap_dlts() {
-    // extcap format: <interface>;<number>;<dlt>;<name>
-    println!("wch-ble-extcap;1;256;DLT_BLUETOOTH_LE_LL_WITH_PHDR");
+    println!("dlt {{number=256}}{{name=wch-ble-extcap}}{{display=DLT_BLUETOOTH_LE_LL_WITH_PHDR}}");
 }
 
 fn extcap_config() {
