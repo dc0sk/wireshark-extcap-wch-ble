@@ -66,7 +66,7 @@ sudo rm /usr/lib/wireshark/extcap/wch-ble-extcap
 ## Usage
 
 1. Plug in the WCH BLE Analyzer Pro
-2. Open Wireshark
+2. Open Wireshark or tshark
 3. Select **WCH BLE Analyzer Pro** from the interface dropdown
 4. Click Start
 
@@ -77,7 +77,15 @@ sudo rm /usr/lib/wireshark/extcap/wch-ble-extcap
 | Channel    | All (auto), 37, 38, 39        | All (auto)        |
 | PHY        | 1M, 2M, CodedS8, CodedS2     | 1M                |
 
-### Standalone (without Wireshark)
+### tshark (CLI)
+
+```bash
+sudo tshark -i wch-ble-extcap
+sudo tshark -i wch-ble-extcap -c 100          # capture 100 packets
+sudo tshark -i wch-ble-extcap -w out.pcap     # write to file
+```
+
+### Standalone (without Wireshark/tshark)
 
 ```bash
 # Pipe directly to Wireshark

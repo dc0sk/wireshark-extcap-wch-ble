@@ -17,3 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Verbose packet logging to stderr (`-v`)
 - Ctrl+C graceful shutdown with packet count
 - README with hardware documentation and usage instructions
+
+### Fixed
+
+- Use correct extcap output format for interface/DLT discovery (structured `extcap {}` / `interface {}` / `dlt {}` syntax instead of semicolons)
