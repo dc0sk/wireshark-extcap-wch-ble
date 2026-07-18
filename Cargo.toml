@@ -1,0 +1,14 @@
+[package]
+name = "wch-ble-extcap"
+version = "0.1.0"
+edition = "2021"
+description = "Wireshark extcap plugin for the WCH BLE Analyzer Pro"
+license = "GPL-3.0-only"
+
+[[bin]]
+name = "wch-ble-extcap"
+path = "src/main.rs"
+
+[dependencies]
+rusb = "0.9"
+ctrlc = "3.4"
