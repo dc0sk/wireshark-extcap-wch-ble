@@ -1,3 +1,10 @@
+---
+project: wch-ble-extcap
+doc: README.md
+status: living
+last_updated: 2026-07-18
+---
+
 # WCH BLE Analyzer Pro — Wireshark Extcap Plugin
 
 A Wireshark extcap plugin for the **WCH BLE Analyzer Pro**, written in Rust.  Select it

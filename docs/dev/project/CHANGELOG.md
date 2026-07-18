@@ -1,3 +1,10 @@
+---
+project: wch-ble-extcap
+doc: docs/dev/project/CHANGELOG.md
+status: living
+last_updated: 2026-07-18
+---
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
