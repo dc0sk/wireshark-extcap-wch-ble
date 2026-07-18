@@ -48,17 +48,17 @@ sudo apt install libusb-1.0-0-dev pkg-config
 
 ```bash
 cd wireshark-extcap-wch-ble
-make release
-sudo make install
+cargo build --release
+sudo cp target/release/wch-ble-extcap /usr/lib/wireshark/extcap/
 ```
 
-This installs `wch-ble-extcap` to `/usr/lib/wireshark/extcap/`.  Restart Wireshark
+This installs `wch-ble-extcap` to Wireshark's extcap directory.  Restart Wireshark
 and the **WCH BLE Analyzer Pro** will appear in the capture interface list.
 
 ### Uninstall
 
 ```bash
-sudo make uninstall
+sudo rm /usr/lib/wireshark/extcap/wch-ble-extcap
 ```
 
 ---
