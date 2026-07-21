@@ -21,4 +21,7 @@ documentation files. Specifically:
 ## Build & quality
 
 - Build: `cargo build --release`
-- The extcap binary must be installed to `/usr/lib/wireshark/extcap/` for Wireshark to discover it.
+- The extcap binary must be installed to Wireshark's extcap directory for Wireshark to discover it.
+  Common paths: `/usr/libexec/wireshark/extcap/` (Debian/Ubuntu),
+  `/usr/lib/wireshark/extcap/` (older installs), `/usr/lib64/wireshark/extcap/` (Fedora).
+  Find yours with: `find / -name ciscodump -type f 2>/dev/null`
