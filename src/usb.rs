@@ -139,6 +139,7 @@ pub enum PhyMode {
 
 pub struct CaptureConfig {
     pub channel: u8,
+    #[allow(dead_code)]
     pub phy: PhyMode,
 }
 
@@ -187,7 +188,7 @@ fn send_ble_config(dev: &McuDevice, cfg: &CaptureConfig) -> rusb::Result<()> {
     frame[19] = 0x55;
     frame[20] = 0x55;
     frame[21] = 0x55;
-    frame[22] = cfg.phy as u8;
+    frame[22] = 0x10;
     dev.bulk_write(&frame)?;
 
     let mut resp = [0u8; 64];

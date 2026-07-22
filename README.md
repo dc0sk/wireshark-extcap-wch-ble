@@ -2,7 +2,7 @@
 project: wch-ble-extcap
 doc: README.md
 status: living
-last_updated: 2026-07-18
+last_updated: 2026-07-22
 ---
 
 # WCH BLE Analyzer Pro — Wireshark Extcap Plugin
@@ -108,6 +108,20 @@ sudo tshark -i wch-ble-extcap -w out.pcap     # write to file
 # Write to a pcap file
 ./target/release/wch-ble-extcap --extcap-capture > capture.pcap
 ```
+
+### Extcap options
+
+The plugin accepts both standard `--extcap-*` options and legacy short forms
+for compatibility with older Wireshark versions:
+
+| Standard              | Legacy         | Description                        |
+|-----------------------|----------------|------------------------------------|
+| `--extcap-interfaces` | `--interfaces` | List available interfaces          |
+| `--extcap-dlts`       | `--dlts`       | List DLT types                     |
+| `--extcap-interface`  | `--interface`  | Select interface                   |
+| `--extcap-config`     | `--config`     | List configuration options         |
+| `--extcap-capture`    | `--capture`    | Start capturing                    |
+| `--extcap-filter`     | `--filter`     | Apply capture filter               |
 
 ### Help
 

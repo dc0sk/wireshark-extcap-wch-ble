@@ -64,7 +64,7 @@ fn extcap_config() {
     println!("value {{arg=1}}{{value=4}}{{display=CodedS2 (Long Range, 500 kbps)}}");
 }
 
-fn extcap_capture(verbose: bool, channel: u8, phy: u8) -> Result<(), Box<dyn std::error::Error>> {
+fn extcap_capture(verbose: bool, channel: u8, phy: u8, fifo: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
     let ctx = rusb::Context::new()?;
     let devs = usb::find_devices(&ctx);
     if devs.is_empty() {
@@ -127,17 +127,27 @@ fn extcap_capture(verbose: bool, channel: u8, phy: u8) -> Result<(), Box<dyn std
         r.store(false, Ordering::SeqCst);
     });
 
-    // Write pcap header to stdout
-    let stdout = io::stdout();
-    let mut out = stdout.lock();
-    pcap::write_pcap_header(&mut out)?;
+    // Write pcap header to output (FIFO or stdout)
+    use std::fs::File;
+    use std::io::BufWriter;
+
+    let mut out_writer: Box<dyn Write> = if let Some(ref fifo_path) = fifo {
+        eprintln!("Writing to FIFO: {}", fifo_path);
+        let f = File::create(fifo_path)?;
+        Box::new(BufWriter::new(f))
+    } else {
+        Box::new(io::stdout())
+    };
+
+    pcap::write_pcap_header(&mut out_writer)?;
 
     eprintln!("Capturing... press Ctrl+C to stop.");
 
     let mut pkt_count: u64 = 0;
+    let pipe_ok = Arc::new(AtomicBool::new(true));
 
     // Main capture loop: drain + idle
-    while running.load(Ordering::SeqCst) {
+    while running.load(Ordering::SeqCst) && pipe_ok.load(Ordering::SeqCst) {
         let mut any_data = false;
 
         // Phase 1: drain
@@ -165,8 +175,12 @@ fn extcap_capture(verbose: bool, channel: u8, phy: u8) -> Result<(), Box<dyn std
                         );
                     }
 
-                    if let Err(e) = pcap::write_pcap_packet(&mut out, rf_ch, hdr.rssi, hdr.access_addr, pdu) {
-                        eprintln!("pcap write error: {}", e);
+                    if let Err(e) = pcap::write_pcap_packet(&mut out_writer, rf_ch, hdr.rssi, hdr.access_addr, pdu) {
+                        if e.kind() == io::ErrorKind::BrokenPipe {
+                            pipe_ok.store(false, Ordering::SeqCst);
+                        } else {
+                            eprintln!("pcap write error: {}", e);
+                        }
                     }
                 });
                 match n {
@@ -178,7 +192,7 @@ fn extcap_capture(verbose: bool, channel: u8, phy: u8) -> Result<(), Box<dyn std
         }
 
         // Phase 2: idle wait
-        if !any_data && running.load(Ordering::SeqCst) {
+        if !any_data && running.load(Ordering::SeqCst) && pipe_ok.load(Ordering::SeqCst) {
             for dev in mcus.iter_mut() {
                 if !dev.is_open {
                     continue;
@@ -202,8 +216,12 @@ fn extcap_capture(verbose: bool, channel: u8, phy: u8) -> Result<(), Box<dyn std
                         );
                     }
 
-                    if let Err(e) = pcap::write_pcap_packet(&mut out, rf_ch, hdr.rssi, hdr.access_addr, pdu) {
-                        eprintln!("pcap write error: {}", e);
+                    if let Err(e) = pcap::write_pcap_packet(&mut out_writer, rf_ch, hdr.rssi, hdr.access_addr, pdu) {
+                        if e.kind() == io::ErrorKind::BrokenPipe {
+                            pipe_ok.store(false, Ordering::SeqCst);
+                        } else {
+                            eprintln!("pcap write error: {}", e);
+                        }
                     }
                 });
             }
@@ -224,7 +242,7 @@ fn extcap_capture(verbose: bool, channel: u8, phy: u8) -> Result<(), Box<dyn std
         usb::close_device(dev);
     }
 
-    out.flush()?;
+    out_writer.flush().ok();
     Ok(())
 }
 
@@ -240,35 +258,39 @@ fn main() {
     let mut verbose = false;
     let mut channel: u8 = 0;
     let mut phy: u8 = 1;
+    let mut fifo: Option<String> = None;
 
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
-            "--extcap-interfaces" => {
+            "--extcap-interfaces" | "--interfaces" => {
                 extcap_interfaces();
                 return;
             }
-            "--extcap-dlts" => {
+            "--extcap-dlts" | "--dlts" => {
                 extcap_dlts();
                 return;
             }
-            "--extcap-interface" | "--extcap-if" => {
+            "--extcap-interface" | "--extcap-if" | "--interface" => {
                 // Next arg is interface name, skip it
                 extcap_mode = true;
                 i += 1;
             }
-            "--extcap-config" => {
+            "--extcap-config" | "--config" => {
                 extcap_config();
                 return;
             }
-            "--extcap-capture" => {
+            "--extcap-capture" | "--capture" => {
                 extcap_mode = true;
             }
-            "--extcap-filter" => {
+            "--extcap-filter" | "--filter" => {
                 i += 1; // skip filter expression
             }
             "--fifo" => {
-                i += 1; // skip fifo path (we write to stdout)
+                i += 1;
+                if i < args.len() {
+                    fifo = Some(args[i].clone());
+                }
             }
             "--channel" => {
                 i += 1;
@@ -299,9 +321,14 @@ fn main() {
     }
 
     if extcap_mode {
-        if let Err(e) = extcap_capture(verbose, channel, phy) {
-            eprintln!("Fatal: {}", e);
-            std::process::exit(1);
+        match extcap_capture(verbose, channel, phy, fifo) {
+            Ok(()) => {}
+            Err(ref e) if e.downcast_ref::<io::Error>()
+                .map_or(false, |ie| ie.kind() == io::ErrorKind::BrokenPipe) => {}
+            Err(e) => {
+                eprintln!("Fatal: {}", e);
+                std::process::exit(1);
+            }
         }
     } else {
         eprint!("{}", HELP_TEXT);
