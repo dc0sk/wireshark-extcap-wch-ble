@@ -69,10 +69,45 @@ and the **WCH BLE Analyzer Pro** will appear in the capture interface list.
 > Common locations: `/usr/libexec/wireshark/extcap/` (Debian/Ubuntu),
 > `/usr/lib/wireshark/extcap/` (older installs), `/usr/lib64/wireshark/extcap/` (Fedora).
 
+### USB permissions (udev)
+
+The plugin opens the analyzer directly via libusb, but Wireshark runs extcap
+plugins as your normal user.  Without a udev rule the device nodes are owned by
+`root` and you get:
+
+```
+open bus=4 addr=6: Access denied (insufficient permissions)
+```
+
+Install the bundled rule:
+
+```bash
+sudo cp udev/60-wch-ble-analyzer.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
+Replug the dongle afterwards if it was already attached.  Verify with:
+
+```bash
+lsusb -d 1a86:8009          # should list the analyzer radios
+getfacl /dev/bus/usb/004/010    # bus/device numbers from lsusb above
+```
+
+`getfacl` must show a `user:<you>:rw-` line.  If it doesn't, the ACL was not
+applied — check that the rules file is named `60-…` and not something above
+`73-`, since systemd's `73-seat-late.rules` is what runs the `uaccess` builtin.
+A tag set after that point shows up in `udevadm info` but has no effect.
+
+> **Note:** The dongle enumerates as **three** separate `1a86:8009` devices
+> behind an internal `1a86:8091` hub.  This is normal, and it is what makes the
+> default *All channels* setting work: the plugin opens all three and assigns
+> advertising channels 37/38/39 one per radio, merging their packet streams.
+
 ### Uninstall
 
 ```bash
 sudo rm /usr/libexec/wireshark/extcap/wch-ble-extcap
+sudo rm /etc/udev/rules.d/60-wch-ble-analyzer.rules
 ```
 
 ---

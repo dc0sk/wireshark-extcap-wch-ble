@@ -1,0 +1,24 @@
+# WCH BLE Analyzer Pro (QinHeng Electronics)
+#
+# Grants the locally logged-in user raw USB access so the Wireshark extcap
+# plugin can claim the device without running as root.
+#
+# The dongle enumerates as three independent 1a86:8009 radios behind an
+# internal 1a86:8091 hub; this rule matches each radio.  The hub itself needs
+# no rule -- the plugin never talks to it.
+#
+# Install:
+#   sudo cp udev/60-wch-ble-analyzer.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+#
+# TAG+="uaccess" delegates access to systemd-logind, which grants it to
+# whoever is logged in at the seat.  On systems without logind, drop the tag
+# and use GROUP="plugdev" (Debian/Ubuntu) or GROUP="uucp" (Arch/Manjaro)
+# instead, and make sure your user is in that group.
+#
+# The "60-" prefix is load-bearing.  systemd's 73-seat-late.rules is what
+# actually runs the uaccess builtin that sets the ACL; a rule numbered above
+# 73 sets the tag too late and the device stays root-only despite the tag
+# showing up in `udevadm info`.  Keep this file below 73.
+
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="8009", TAG+="uaccess", MODE="0660"
