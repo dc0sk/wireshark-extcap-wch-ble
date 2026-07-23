@@ -283,9 +283,15 @@ fn main() {
             "--extcap-capture" | "--capture" => {
                 extcap_mode = true;
             }
-            "--extcap-filter" | "--filter" => {
+            "--extcap-filter" | "--extcap-capture-filter" | "--filter" => {
                 i += 1; // skip filter expression
             }
+            // Wireshark may pass these; we don't use them but must not fail.
+            "--extcap-control-in" | "--extcap-control-out" | "--extcap-reload-option" => {
+                i += 1;
+            }
+            // Passed as "--extcap-version" or "--extcap-version=4.4.9".
+            v if v == "--extcap-version" || v.starts_with("--extcap-version=") => {}
             "--fifo" => {
                 i += 1;
                 if i < args.len() {
@@ -310,6 +316,11 @@ fn main() {
             "-h" | "--help" => {
                 eprint!("{}", HELP_TEXT);
                 return;
+            }
+            // Wireshark passes "--extcap-version=4.4.9"; tolerate any
+            // "--extcap-*" option we don't know rather than aborting the pipe.
+            other if other.starts_with("--extcap-") => {
+                eprintln!("Ignoring unhandled extcap option: {}", other);
             }
             _ => {
                 eprintln!("Unknown option: {}", args[i]);
