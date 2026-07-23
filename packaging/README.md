@@ -14,6 +14,27 @@ inventory back out of the built artifacts rather than trusting a checklist.
 All artifacts land in `dist/`.  Intermediate staging trees go to `pkg/`.  Both
 are ignored by git.
 
+**CI builds every one of these on a `v*` tag** (`.github/workflows/release.yml`),
+and can be run manually from the Actions tab (workflow_dispatch) to exercise the
+cross builds without cutting a release — a manual run builds and verifies but
+does not publish.  The scripts below are what CI invokes, and also run standalone.
+
+## Vendored libusb
+
+Packages are built with the crate's `vendored` feature, which compiles libusb
+from source and links it statically.  Two consequences:
+
+- Cross-compiling needs only a cross **C** compiler.  There is no target-arch
+  libusb package to install and no pkg-config sysroot to configure — the same
+  cross gcc that links the binary also compiles libusb.
+- The artifact has no libusb runtime dependency.  On Linux it still links
+  `libudev` for device enumeration, so the `.deb` depends on `libudev1` (a
+  near-universal systemd library), not `libusb-1.0-0`.
+
+Set `CARGO_FEATURES=` (empty) to build against the system libusb instead.  The
+Arch `PKGBUILD` deliberately does this — linking the distro libusb is the Arch
+convention — so it keeps `depends=('libusb')`.
+
 | Format | Script | Builds on |
 |---|---|---|
 | Debian/Ubuntu `.deb` (amd64) | `debian/build.sh amd64` | Linux |

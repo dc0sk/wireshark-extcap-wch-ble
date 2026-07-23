@@ -3,3 +3,9 @@
 # Packaging output: built artifacts and intermediate staging trees.
 /dist
 /pkg
+
+# makepkg build output when the PKGBUILD is built in place.
+/packaging/arch/pkg/
+/packaging/arch/src/
+/packaging/arch/*.pkg.tar.zst
+/packaging/arch/*.tar.gz

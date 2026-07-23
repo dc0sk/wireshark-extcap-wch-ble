@@ -9,6 +9,14 @@ license = "GPL-3.0-only"
 name = "wch-ble-extcap"
 path = "src/main.rs"
 
+[features]
+# Statically compile libusb from source instead of linking the system library.
+# Packaging builds enable this so the produced binaries carry no libusb runtime
+# dependency and cross-compiling needs only a cross C compiler -- no target-arch
+# libusb dev package and no pkg-config sysroot.  (libudev is still linked for
+# device enumeration on Linux.)
+vendored = ["rusb/vendored"]
+
 [dependencies]
 rusb = "0.9"
 # "termination" adds SIGTERM/SIGHUP to the default SIGINT handler.  Wireshark
