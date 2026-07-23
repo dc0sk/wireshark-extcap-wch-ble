@@ -1,1 +1,5 @@
 /target
+
+# Packaging output: built artifacts and intermediate staging trees.
+/dist
+/pkg

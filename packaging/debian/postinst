@@ -1,0 +1,52 @@
+#!/bin/sh
+# Link the plugin into Wireshark's extcap directory and activate the udev rule.
+#
+# The extcap directory is NOT stable across Debian derivatives and Wireshark
+# versions -- it follows libexecdir, which is multiarch-qualified on Debian
+# (/usr/lib/<triple>/wireshark/extcap) but plain elsewhere.  Hardcoding one
+# path installs the plugin somewhere Wireshark never looks, and the failure is
+# silent: the interface simply never appears.  So the binary lives in
+# /usr/bin (also usable standalone) and is symlinked into whichever directory
+# actually exists on this machine.
+set -e
+
+BIN=/usr/bin/wch-ble-extcap
+
+extcap_dirs() {
+    if command -v dpkg-architecture >/dev/null 2>&1; then
+        triple=$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || true)
+        [ -n "$triple" ] && echo "/usr/lib/$triple/wireshark/extcap"
+    fi
+    for d in /usr/lib/*/wireshark/extcap /usr/libexec/wireshark/extcap \
+             /usr/lib/wireshark/extcap; do
+        [ -d "$d" ] && echo "$d"
+    done
+}
+
+case "$1" in
+    configure)
+        linked=0
+        for dir in $(extcap_dirs | awk '!seen[$0]++'); do
+            [ -d "$dir" ] || continue
+            ln -sf "$BIN" "$dir/wch-ble-extcap"
+            linked=1
+        done
+        if [ "$linked" = 0 ]; then
+            echo "wch-ble-extcap: no Wireshark extcap directory found." >&2
+            echo "  The plugin is installed at $BIN but Wireshark will not see" >&2
+            echo "  it until you symlink it into your extcap directory." >&2
+            echo "  Find it with: find / -name ciscodump -type f 2>/dev/null" >&2
+        fi
+
+        # Apply the udev rule to an already-attached dongle.
+        if command -v udevadm >/dev/null 2>&1; then
+            udevadm control --reload-rules >/dev/null 2>&1 || true
+            udevadm trigger --subsystem-match=usb >/dev/null 2>&1 || true
+        fi
+        ;;
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+esac
+
+#DEBHELPER#
+exit 0

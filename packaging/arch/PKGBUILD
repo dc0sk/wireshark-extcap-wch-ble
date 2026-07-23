@@ -1,0 +1,41 @@
+# Maintainer: DC0SK <simon.keimer@mailbox.org>
+pkgname=wch-ble-extcap
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Wireshark extcap plugin for the WCH BLE Analyzer Pro (BLE sniffer)"
+arch=('x86_64' 'aarch64')
+url="https://github.com/dc0sk/wireshark-extcap-wch-ble"
+license=('GPL-3.0-only')
+depends=('libusb')
+makedepends=('cargo')
+optdepends=('wireshark-qt: GUI capture interface'
+            'wireshark-cli: tshark capture')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+_srcdir="wireshark-extcap-wch-ble-$pkgver"
+
+build() {
+    cd "$_srcdir"
+    cargo build --release --locked
+}
+
+package() {
+    cd "$_srcdir"
+
+    # Arch's Wireshark uses a plain, non-multiarch extcap directory.
+    install -Dm755 "target/release/$pkgname" \
+        "$pkgdir/usr/lib/wireshark/extcap/$pkgname"
+    # Also expose it on PATH for standalone / tshark use.
+    install -dm755 "$pkgdir/usr/bin"
+    ln -s "/usr/lib/wireshark/extcap/$pkgname" "$pkgdir/usr/bin/$pkgname"
+
+    # Grants the logged-in user raw USB access to the dongle.  Must sort below
+    # systemd's 73-seat-late.rules, which is what runs the uaccess builtin.
+    install -Dm644 udev/60-wch-ble-analyzer.rules \
+        "$pkgdir/usr/lib/udev/rules.d/60-wch-ble-analyzer.rules"
+
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+    if [ -d docs ]; then cp -r docs "$pkgdir/usr/share/doc/$pkgname/docs"; fi
+}

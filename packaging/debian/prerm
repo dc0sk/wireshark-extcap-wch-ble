@@ -1,0 +1,25 @@
+#!/bin/sh
+# Remove the extcap symlinks created by postinst.
+#
+# Only links that actually point at our binary are removed, so a hand-placed
+# file of the same name belonging to someone else is left alone.
+set -e
+
+BIN=/usr/bin/wch-ble-extcap
+
+case "$1" in
+    remove|upgrade|deconfigure)
+        for dir in /usr/lib/*/wireshark/extcap /usr/libexec/wireshark/extcap \
+                   /usr/lib/wireshark/extcap; do
+            link="$dir/wch-ble-extcap"
+            if [ -L "$link" ] && [ "$(readlink "$link")" = "$BIN" ]; then
+                rm -f "$link"
+            fi
+        done
+        ;;
+    failed-upgrade)
+        ;;
+esac
+
+#DEBHELPER#
+exit 0

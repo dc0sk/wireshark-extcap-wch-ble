@@ -2,7 +2,7 @@
 project: wch-ble-extcap
 doc: README.md
 status: living
-last_updated: 2026-07-22
+last_updated: 2026-07-23
 ---
 
 # WCH BLE Analyzer Pro — Wireshark Extcap Plugin
@@ -51,7 +51,33 @@ sudo apt install libusb-1.0-0-dev pkg-config
 
 ---
 
-## Build & install
+## Install from a package
+
+Packages install the plugin into Wireshark's extcap directory, set up the udev
+rule, and place `LICENSE`, `README.md` and `docs/` under the platform's usual
+documentation path.  Build scripts and per-platform details are in
+[`packaging/README.md`](packaging/README.md).
+
+```bash
+# Debian / Ubuntu / Raspberry Pi OS
+sudo apt install ./wch-ble-extcap_<version>_<arch>.deb    # amd64, arm64, armhf
+
+# Arch / Manjaro
+cd packaging/arch && makepkg -si
+```
+
+On **Windows**, run the `-setup.exe` installer (it locates Wireshark through the
+registry), or unpack the portable zip and copy `wch-ble-extcap.exe` into
+Wireshark's `extcap\` directory yourself.  The dongle additionally needs a
+WinUSB driver bound to it — [Zadig](https://zadig.akeo.ie/) does this — because
+libusb cannot talk to the stock vendor driver.
+
+On **macOS**, run the `.pkg`.  Note it has no uninstaller; `packaging/README.md`
+lists the files to remove by hand.
+
+---
+
+## Build & install manually
 
 ```bash
 cd wireshark-extcap-wch-ble
@@ -156,7 +182,13 @@ for compatibility with older Wireshark versions:
 | `--extcap-interface`  | `--interface`  | Select interface                   |
 | `--extcap-config`     | `--config`     | List configuration options         |
 | `--extcap-capture`    | `--capture`    | Start capturing                    |
-| `--extcap-filter`     | `--filter`     | Apply capture filter               |
+| `--extcap-capture-filter` | `--extcap-filter`, `--filter` | Apply capture filter |
+| `--extcap-version`    | —              | Wireshark version, accepted and ignored |
+
+Options Wireshark passes but the plugin does not use (`--extcap-control-in`,
+`--extcap-control-out`, `--extcap-reload-option`) are accepted and ignored.  Any
+other unrecognised `--extcap-*` option produces a warning rather than an error,
+so a future Wireshark release cannot break capture by adding one.
 
 ### Help
 
@@ -177,7 +209,10 @@ Wireshark.  When you select the interface, Wireshark launches `wch-ble-extcap` w
 4. Writes a `LINKTYPE_BLUETOOTH_LE_LL_WITH_PHDR` (DLT 256) pcap stream to stdout
 5. Wireshark decodes and displays the packets in real time
 
-All status and diagnostic messages go to stderr so they don't corrupt the pcap stream.
+Diagnostics never go to stdout, which carries the pcap stream.  They are also
+silent by default: Wireshark shows anything an extcap plugin writes to stderr in
+an error dialog, so status output is gated behind `-v` and only genuine errors
+are printed unconditionally.
 
 ---
 

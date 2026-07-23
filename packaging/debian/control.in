@@ -1,0 +1,21 @@
+Package: wch-ble-extcap
+Version: @VERSION@
+Architecture: @ARCH@
+Section: net
+Priority: optional
+Maintainer: DC0SK <simon.keimer@mailbox.org>
+Homepage: https://github.com/dc0sk/wireshark-extcap-wch-ble
+Depends: libusb-1.0-0
+Recommends: wireshark
+Description: Wireshark extcap plugin for the WCH BLE Analyzer Pro
+ Captures Bluetooth Low Energy advertising traffic from the WCH (QinHeng
+ Electronics) BLE Analyzer Pro dongle and presents it to Wireshark as a live
+ capture interface, using DLT_BLUETOOTH_LE_LL_WITH_PHDR.
+ .
+ The dongle enumerates as three independent radios behind an internal hub.
+ The plugin opens all three and assigns advertising channels 37, 38 and 39 one
+ per radio, so the default "All channels" mode covers the full advertising
+ band in a single capture.
+ .
+ A udev rule granting the logged-in user access to the dongle is installed
+ alongside the plugin; no root privileges are needed to capture.
