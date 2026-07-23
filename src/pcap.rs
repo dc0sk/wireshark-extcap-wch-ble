@@ -50,7 +50,12 @@ pub fn write_pcap_header<W: Write>(out: &mut W) -> io::Result<()> {
         snaplen: PCAP_SNAPLEN,
         network: DLT_BLUETOOTH_LE_LL_WITH_PHDR,
     };
-    let bytes = unsafe { std::slice::from_raw_parts(&hdr as *const _ as *const u8, std::mem::size_of::<PcapFileHdr>()) };
+    let bytes = unsafe {
+        std::slice::from_raw_parts(
+            &hdr as *const _ as *const u8,
+            std::mem::size_of::<PcapFileHdr>(),
+        )
+    };
     out.write_all(bytes)?;
     out.flush()?;
     Ok(())
@@ -95,7 +100,10 @@ pub fn write_pcap_packet<W: Write>(
 
     // Write record header
     let bytes = unsafe {
-        std::slice::from_raw_parts(&rh as *const _ as *const u8, std::mem::size_of::<PcapRecHdr>())
+        std::slice::from_raw_parts(
+            &rh as *const _ as *const u8,
+            std::mem::size_of::<PcapRecHdr>(),
+        )
     };
     out.write_all(bytes)?;
 

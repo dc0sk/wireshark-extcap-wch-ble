@@ -9,9 +9,12 @@ last_updated: 2026-07-23
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/).
+The format is based on [Keep a Changelog](https://keepachangelog.com/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
+
+## [0.1.1] - 2026-07-23
 
 ### Added
 
@@ -22,6 +25,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   artifact and exits non-zero if one is incomplete
 - udev rule (`udev/60-wch-ble-analyzer.rules`) granting the logged-in user
   access to the dongle, so capturing no longer needs root
+- `scripts/check-version.sh`, checking that Cargo.lock, the PKGBUILD, the
+  changelog and the extcap handshake all agree with `Cargo.toml`
+
+### Changed
+
+- The version reported in the extcap handshake is now derived from
+  `CARGO_PKG_VERSION` instead of a hardcoded literal, which had already drifted
+  and would have reported 0.1.0 from a 0.1.1 build
+- Applied `cargo fmt` and cleared the two outstanding clippy lints, so the tree
+  now passes `cargo fmt --check` and `cargo clippy -- -D warnings`
+- Committed an SPDX 2.3 SBOM (`docs/dev/project/sbom.spdx.json`), regenerated
+  each release
 
 ### Fixed
 
@@ -51,3 +66,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ### Fixed
 
 - Use correct extcap output format for interface/DLT discovery (structured `extcap {}` / `interface {}` / `dlt {}` syntax instead of semicolons)
+
+[Unreleased]: https://github.com/dc0sk/wireshark-extcap-wch-ble/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/dc0sk/wireshark-extcap-wch-ble/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/dc0sk/wireshark-extcap-wch-ble/releases/tag/v0.1.0

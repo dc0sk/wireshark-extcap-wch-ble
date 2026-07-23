@@ -43,7 +43,8 @@ fn ble_ch_to_rf(ch: u8) -> u8 {
 }
 
 fn extcap_interfaces() {
-    println!("extcap {{version=0.1.0}}");
+    // Taken from Cargo.toml so it cannot drift from the shipped version.
+    println!("extcap {{version={}}}", env!("CARGO_PKG_VERSION"));
     println!("interface {{value=wch-ble-extcap}}{{display=WCH BLE Analyzer Pro}}");
 }
 
@@ -66,12 +67,20 @@ fn extcap_config() {
     println!("value {{arg=1}}{{value=4}}{{display=CodedS2 (Long Range, 500 kbps)}}");
 }
 
-fn extcap_capture(verbose: bool, channel: u8, phy: u8, fifo: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+fn extcap_capture(
+    verbose: bool,
+    channel: u8,
+    phy: u8,
+    fifo: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
     usb::set_verbose(verbose);
     let ctx = rusb::Context::new()?;
     let devs = usb::find_devices(&ctx);
     if devs.is_empty() {
-        eprintln!("No WCH BLE Analyzer MCUs found (VID 0x{:04X} / PID 0x{:04X}).", WCH_VID, WCH_PID_BLE_MCU);
+        eprintln!(
+            "No WCH BLE Analyzer MCUs found (VID 0x{:04X} / PID 0x{:04X}).",
+            WCH_VID, WCH_PID_BLE_MCU
+        );
         eprintln!("Check USB connection and udev rules.");
         std::process::exit(1);
     }
@@ -112,7 +121,7 @@ fn extcap_capture(verbose: bool, channel: u8, phy: u8, fifo: Option<String>) -> 
             continue;
         }
         let mut cfg = CaptureConfig {
-            channel: channel,
+            channel,
             phy: phy_mode,
         };
         // Auto-assign one adv channel per MCU
@@ -123,7 +132,10 @@ fn extcap_capture(verbose: bool, channel: u8, phy: u8, fifo: Option<String>) -> 
         if let Err(e) = usb::start_capture(dev, &cfg) {
             eprintln!("start_capture bus={} addr={}: {}", dev.bus, dev.addr, e);
         } else if verbose && n_devs > 1 && cfg.channel != 0 {
-            eprintln!("  MCU {} (bus={} addr={}): BLE ch{}", i, dev.bus, dev.addr, cfg.channel);
+            eprintln!(
+                "  MCU {} (bus={} addr={}): BLE ch{}",
+                i, dev.bus, dev.addr, cfg.channel
+            );
         }
     }
 
@@ -186,7 +198,13 @@ fn extcap_capture(verbose: bool, channel: u8, phy: u8, fifo: Option<String>) -> 
                         );
                     }
 
-                    if let Err(e) = pcap::write_pcap_packet(&mut out_writer, rf_ch, hdr.rssi, hdr.access_addr, pdu) {
+                    if let Err(e) = pcap::write_pcap_packet(
+                        &mut out_writer,
+                        rf_ch,
+                        hdr.rssi,
+                        hdr.access_addr,
+                        pdu,
+                    ) {
                         if e.kind() == io::ErrorKind::BrokenPipe {
                             pipe_ok.store(false, Ordering::SeqCst);
                         } else {
@@ -227,7 +245,13 @@ fn extcap_capture(verbose: bool, channel: u8, phy: u8, fifo: Option<String>) -> 
                         );
                     }
 
-                    if let Err(e) = pcap::write_pcap_packet(&mut out_writer, rf_ch, hdr.rssi, hdr.access_addr, pdu) {
+                    if let Err(e) = pcap::write_pcap_packet(
+                        &mut out_writer,
+                        rf_ch,
+                        hdr.rssi,
+                        hdr.access_addr,
+                        pdu,
+                    ) {
                         if e.kind() == io::ErrorKind::BrokenPipe {
                             pipe_ok.store(false, Ordering::SeqCst);
                         } else {
@@ -349,8 +373,9 @@ fn main() {
     if extcap_mode {
         match extcap_capture(verbose, channel, phy, fifo) {
             Ok(()) => {}
-            Err(ref e) if e.downcast_ref::<io::Error>()
-                .map_or(false, |ie| ie.kind() == io::ErrorKind::BrokenPipe) => {}
+            Err(ref e)
+                if e.downcast_ref::<io::Error>()
+                    .is_some_and(|ie| ie.kind() == io::ErrorKind::BrokenPipe) => {}
             Err(e) => {
                 eprintln!("Fatal: {}", e);
                 std::process::exit(1);

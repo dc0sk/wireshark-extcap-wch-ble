@@ -1,6 +1,6 @@
 # Maintainer: DC0SK <simon.keimer@mailbox.org>
 pkgname=wch-ble-extcap
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc="Wireshark extcap plugin for the WCH BLE Analyzer Pro (BLE sniffer)"
 arch=('x86_64' 'aarch64')

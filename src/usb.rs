@@ -102,10 +102,7 @@ pub fn find_devices(ctx: &Context) -> Vec<McuDevice> {
             Err(_) => continue,
         };
         if desc.vendor_id() == WCH_VID && desc.product_id() == WCH_PID_BLE_MCU {
-            devs.push(McuDevice::new(
-                device.bus_number(),
-                device.address(),
-            ));
+            devs.push(McuDevice::new(device.bus_number(), device.address()));
         }
     }
     devs
@@ -334,7 +331,11 @@ where
         if p + 18 <= xfer {
             src_addr.copy_from_slice(&buf[p + 12..p + 18]);
         }
-        if (pkt_type == 0x03 || pkt_type == 0x05) && pdu_plen >= 12 && plen >= 18 + 6 && p + 24 <= xfer {
+        if (pkt_type == 0x03 || pkt_type == 0x05)
+            && pdu_plen >= 12
+            && plen >= 18 + 6
+            && p + 24 <= xfer
+        {
             dst_addr.copy_from_slice(&buf[p + 18..p + 24]);
         }
 
