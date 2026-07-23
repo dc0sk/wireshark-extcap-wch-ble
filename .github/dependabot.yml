@@ -5,9 +5,15 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Wait before proposing a brand-new release, so a compromised version has a
+    # window to be caught before it lands in a PR here.
+    cooldown:
+      default-days: 7
 
   # Cargo dependencies.
   - package-ecosystem: cargo
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
