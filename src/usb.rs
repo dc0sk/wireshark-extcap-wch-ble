@@ -1,5 +1,18 @@
 use rusb::{Context, DeviceHandle, UsbContext};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
+
+/// Wireshark surfaces anything an extcap plugin writes to stderr in an error
+/// dialog, so protocol diagnostics stay quiet unless -v was passed.
+static VERBOSE: AtomicBool = AtomicBool::new(false);
+
+pub fn set_verbose(on: bool) {
+    VERBOSE.store(on, Ordering::SeqCst);
+}
+
+fn verbose() -> bool {
+    VERBOSE.load(Ordering::SeqCst)
+}
 
 pub const WCH_VID: u16 = 0x1A86;
 pub const WCH_PID_BLE_MCU: u16 = 0x8009;
@@ -154,7 +167,7 @@ fn send_identify(dev: &McuDevice) -> rusb::Result<()> {
 
     let mut resp = [0u8; 64];
     match dev.bulk_read(&mut resp) {
-        Ok((n, _)) if n >= 1 => {
+        Ok((n, _)) if n >= 1 && verbose() => {
             eprintln!(
                 "[wch bus={} addr={}] AA84 response[0]=0x{:02X} ({})",
                 dev.bus,
@@ -202,7 +215,7 @@ fn send_start_scan(dev: &McuDevice) -> rusb::Result<()> {
 
     let mut resp = [0u8; 64];
     match dev.bulk_read(&mut resp) {
-        Ok((n, _)) if n >= 1 => {
+        Ok((n, _)) if n >= 1 && verbose() => {
             eprintln!(
                 "[wch bus={} addr={}] AA A1 response: {} bytes (magic=0x{:02X} type=0x{:02X})",
                 dev.bus,

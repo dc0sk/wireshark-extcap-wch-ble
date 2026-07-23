@@ -11,4 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 rusb = "0.9"
-ctrlc = "3.4"
+# "termination" adds SIGTERM/SIGHUP to the default SIGINT handler.  Wireshark
+# stops an extcap plugin with SIGTERM; without this the process dies by signal
+# and Wireshark reports the non-zero exit as an error dialog.
+ctrlc = { version = "3.4", features = ["termination"] }

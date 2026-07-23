@@ -26,7 +26,9 @@ Extcap options (used by Wireshark):
 Plugin options (passed via extcap config):
   --channel <n>             BLE advertising channel: 37, 38, 39, or 0=all (default: 0)
   --phy <n>                 PHY: 1=1M (default), 2=2M, 3=CodedS8, 4=CodedS2
-  -v                        Verbose: print packets to stderr
+  -v                        Verbose: print packets and status to stderr
+                            (off by default -- Wireshark shows anything on
+                            stderr as an error dialog)
   -h, --help                Show this help
 ";
 
@@ -65,6 +67,7 @@ fn extcap_config() {
 }
 
 fn extcap_capture(verbose: bool, channel: u8, phy: u8, fifo: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+    usb::set_verbose(verbose);
     let ctx = rusb::Context::new()?;
     let devs = usb::find_devices(&ctx);
     if devs.is_empty() {
@@ -72,14 +75,18 @@ fn extcap_capture(verbose: bool, channel: u8, phy: u8, fifo: Option<String>) -> 
         eprintln!("Check USB connection and udev rules.");
         std::process::exit(1);
     }
-    eprintln!("Found {} MCU device(s).", devs.len());
+    if verbose {
+        eprintln!("Found {} MCU device(s).", devs.len());
+    }
 
     let mut mcus: Vec<McuDevice> = devs;
     let mut opened = 0;
     for dev in &mut mcus {
         match usb::open_device(dev, &ctx) {
             Ok(()) => {
-                eprintln!("Opened bus={} addr={}", dev.bus, dev.addr);
+                if verbose {
+                    eprintln!("Opened bus={} addr={}", dev.bus, dev.addr);
+                }
                 opened += 1;
             }
             Err(e) => {
@@ -115,7 +122,7 @@ fn extcap_capture(verbose: bool, channel: u8, phy: u8, fifo: Option<String>) -> 
 
         if let Err(e) = usb::start_capture(dev, &cfg) {
             eprintln!("start_capture bus={} addr={}: {}", dev.bus, dev.addr, e);
-        } else if n_devs > 1 && cfg.channel != 0 {
+        } else if verbose && n_devs > 1 && cfg.channel != 0 {
             eprintln!("  MCU {} (bus={} addr={}): BLE ch{}", i, dev.bus, dev.addr, cfg.channel);
         }
     }
@@ -132,7 +139,9 @@ fn extcap_capture(verbose: bool, channel: u8, phy: u8, fifo: Option<String>) -> 
     use std::io::BufWriter;
 
     let mut out_writer: Box<dyn Write> = if let Some(ref fifo_path) = fifo {
-        eprintln!("Writing to FIFO: {}", fifo_path);
+        if verbose {
+            eprintln!("Writing to FIFO: {}", fifo_path);
+        }
         let f = File::create(fifo_path)?;
         Box::new(BufWriter::new(f))
     } else {
@@ -141,7 +150,9 @@ fn extcap_capture(verbose: bool, channel: u8, phy: u8, fifo: Option<String>) -> 
 
     pcap::write_pcap_header(&mut out_writer)?;
 
-    eprintln!("Capturing... press Ctrl+C to stop.");
+    if verbose {
+        eprintln!("Capturing... press Ctrl+C to stop.");
+    }
 
     let mut pkt_count: u64 = 0;
     let pipe_ok = Arc::new(AtomicBool::new(true));
@@ -229,16 +240,20 @@ fn extcap_capture(verbose: bool, channel: u8, phy: u8, fifo: Option<String>) -> 
     }
 
     // Stop and clean up
-    eprintln!("\nStopping capture ({} packets)...", pkt_count);
+    if verbose {
+        eprintln!("\nStopping capture ({} packets)...", pkt_count);
+    }
     for dev in mcus.iter_mut() {
         if !dev.is_open {
             continue;
         }
         let _ = usb::stop_capture(dev);
-        eprintln!(
-            "  bus={} addr={}: rx={} err={}",
-            dev.bus, dev.addr, dev.rx_count, dev.err_count
-        );
+        if verbose {
+            eprintln!(
+                "  bus={} addr={}: rx={} err={}",
+                dev.bus, dev.addr, dev.rx_count, dev.err_count
+            );
+        }
         usb::close_device(dev);
     }
 
