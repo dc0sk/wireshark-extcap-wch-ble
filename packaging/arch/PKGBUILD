@@ -11,7 +11,7 @@ makedepends=('cargo')
 optdepends=('wireshark-qt: GUI capture interface'
             'wireshark-cli: tshark capture')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('ebca96bfee5c1b1d073c262266656a82920297fd8d7f705548dde13b1bf12f82')
 
 _srcdir="wireshark-extcap-wch-ble-$pkgver"
 
