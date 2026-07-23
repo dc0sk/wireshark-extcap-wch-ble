@@ -14,6 +14,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- GitHub Actions CI: a gate workflow (fmt, clippy `-D warnings`, build, test,
+  version check) on every push and PR, and a release workflow that builds all
+  cross targets on a `v*` tag (or manual dispatch) and publishes the artifacts
+- `.cargo/config.toml` naming the ARM cross linkers, so ARM builds work locally
+  as well as in CI
+
+### Changed
+
+- Packages are now built with libusb compiled from source (the new `vendored`
+  feature). Cross-compiling needs only a cross C compiler — no target-arch
+  libusb or pkg-config sysroot — and the binaries carry no libusb runtime
+  dependency. The Debian package's `Depends` is accordingly `libudev1` instead
+  of `libusb-1.0-0`. Source builds still link the system libusb by default
+
 ## [0.1.1] - 2026-07-23
 
 ### Added

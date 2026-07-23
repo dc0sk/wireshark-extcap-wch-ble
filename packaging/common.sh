@@ -31,9 +31,15 @@ stage_docs() {
 
 # build_target <rust-triple>
 # --locked so the lockfile is honoured; locking alone is not reproducibility.
+# Packages are built with the `vendored` feature (override with CARGO_FEATURES=)
+# so the artifact statically embeds libusb and cross-compiling needs only a
+# cross C compiler.  See the feature comment in Cargo.toml.
+CARGO_FEATURES="${CARGO_FEATURES-vendored}"
 build_target() {
     local triple="$1"
-    ( cd "$REPO_ROOT" && cargo build --release --locked --target "$triple" )
+    local feat_arg=()
+    [ -n "$CARGO_FEATURES" ] && feat_arg=(--features "$CARGO_FEATURES")
+    ( cd "$REPO_ROOT" && cargo build --release --locked --target "$triple" "${feat_arg[@]}" )
 }
 
 die() { echo "error: $*" >&2; exit 1; }

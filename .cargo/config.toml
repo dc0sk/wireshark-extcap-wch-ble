@@ -1,0 +1,12 @@
+# Cross linkers for the ARM Linux targets used by the packaging scripts and CI.
+# These sections apply only when building for the named target, so native
+# (x86_64) builds are unaffected.  The same cross gcc also compiles the vendored
+# libusb, since the `cc` crate derives its compiler name from the target triple.
+#
+# Provided by: apt install gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
+
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"
+
+[target.armv7-unknown-linux-gnueabihf]
+linker = "arm-linux-gnueabihf-gcc"

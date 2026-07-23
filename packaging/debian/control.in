@@ -5,7 +5,7 @@ Section: net
 Priority: optional
 Maintainer: DC0SK <simon.keimer@mailbox.org>
 Homepage: https://github.com/dc0sk/wireshark-extcap-wch-ble
-Depends: libusb-1.0-0
+Depends: libudev1
 Recommends: wireshark
 Description: Wireshark extcap plugin for the WCH BLE Analyzer Pro
  Captures Bluetooth Low Energy advertising traffic from the WCH (QinHeng

@@ -1,0 +1,162 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  # Manual trigger so the cross builds can be exercised WITHOUT cutting a tag.
+  # On a manual run the packages are built and verified but nothing is published
+  # (the publish job is gated on the ref being a tag).
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # --- Linux: amd64 natively, arm64/armhf cross-compiled --------------------
+  debian:
+    name: Debian .deb (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64, armhf]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # matrix.arch is our own constrained value, but it is passed through the
+      # environment rather than interpolated into the script text on principle.
+      - name: Install toolchain
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+          case "$ARCH" in
+            amd64) TRIPLE=x86_64-unknown-linux-gnu ;;
+            arm64) TRIPLE=aarch64-unknown-linux-gnu
+                   sudo apt-get install -y gcc-aarch64-linux-gnu ;;
+            armhf) TRIPLE=armv7-unknown-linux-gnueabihf
+                   sudo apt-get install -y gcc-arm-linux-gnueabihf ;;
+            *) echo "unknown arch $ARCH" >&2; exit 1 ;;
+          esac
+          rustup target add "$TRIPLE"
+          echo "TRIPLE=$TRIPLE" >> "$GITHUB_ENV"
+
+      # The vendored libusb (packaging default) is compiled by the cross gcc, so
+      # no target-arch libusb package or pkg-config sysroot is required.
+      - name: Build package
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: ./packaging/debian/build.sh "$ARCH"
+
+      - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: deb-${{ matrix.arch }}
+          path: dist/*.deb
+          if-no-files-found: error
+
+  # --- Windows: cross-compiled from Linux with mingw-w64 --------------------
+  windows:
+    name: Windows (zip + installer)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64 nsis jq
+          rustup target add x86_64-pc-windows-gnu
+
+      - name: Build package
+        run: ./packaging/windows/build.sh
+
+      - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: windows
+          path: |
+            dist/*.zip
+            dist/*setup.exe
+          if-no-files-found: error
+
+  # --- macOS: native on the runner (Apple silicon) --------------------------
+  macos:
+    name: macOS .pkg
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Build package
+        run: ./packaging/macos/build.sh
+
+      # pkgutil exists here, so the .pkg contents are verified on this runner.
+      - name: Verify package
+        run: ./packaging/verify.sh
+
+      - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: macos
+          path: dist/*.pkg
+          if-no-files-found: error
+
+  # --- Cross-check the Linux/Windows artifacts contain what they must -------
+  verify:
+    name: Verify artifacts
+    needs: [debian, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq dpkg p7zip-full
+
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Verify
+        run: ./packaging/verify.sh
+
+  # --- Publish, tags only ---------------------------------------------------
+  release:
+    name: Publish GitHub release
+    needs: [debian, windows, macos, verify]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # only this job writes; needed to create the release
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # Extract this tag's section from the release notes; fall back to
+          # auto-generated notes if the maintainer hasn't written one.
+          notes=$(mktemp)
+          awk -v tag="$TAG" '
+            $0 ~ "^## " tag "( |$)" {inz=1; next}   # tag header: start, drop it
+            inz && /^## / {exit}                    # next section: stop
+            inz {print}
+          ' docs/dev/project/RELEASE_NOTES.md > "$notes" || true
+
+          if [ -s "$notes" ]; then
+            gh release create "$TAG" --title "$TAG" --notes-file "$notes" --verify-tag
+          else
+            echo "No release-notes section for $TAG; using generated notes."
+            gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag
+          fi
+
+          # Upload every built artifact.
+          gh release upload "$TAG" dist/* --clobber
